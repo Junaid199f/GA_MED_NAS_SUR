@@ -15,7 +15,7 @@ import logging
 from ga import GA
 
 if __name__ == '__main__':
-  #Setting the paramters for the GA-NAS algorithm
+  #Setting the parameters for the GA-NAS algorithm
   population_size = 6
   number_of_generations = 5
   crossover_prob = 0.7
