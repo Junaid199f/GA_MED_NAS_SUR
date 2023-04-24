@@ -1,11 +1,10 @@
-import sys
 import argparse
+import sys
 from pathlib import Path
 
 from graphviz import Digraph
 
 import utils
-import genotypes
 
 
 def plot(genotype, bottleneck, filename, directory, view):

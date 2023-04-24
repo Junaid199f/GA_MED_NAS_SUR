@@ -1,28 +1,25 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Dec  8 16:48:33 2022
+
+@author: Muhammad Junaid Ali (IRMAS Lab, University Haute Alsace)
+"""
+
+
 import logging
 import os.path
 
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-
-from dataset import Dataset
-import random
-import numpy as np
-import random
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets
-import torchvision.transforms as transforms
-from torch.utils.data.sampler import SubsetRandomSampler
-from torchsummary import summary
+
 import utils
-import json
-import time
+from dataset import Dataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0
+
+
 class Evaluate:
     def __init__(self, batch_size):
         self.dataset = Dataset()
@@ -34,7 +31,7 @@ class Evaluate:
         self.scheduler = None
 
     # Training
-    def __train(self,net,epoch,grad_clip):
+    def __train(self, net, epoch, grad_clip):
         print('\nEpoch: %d' % epoch)
         net.train()
         train_loss = 0
@@ -43,7 +40,7 @@ class Evaluate:
         for batch_idx, (inputs, targets) in enumerate(self.train_loader):
             inputs, targets = inputs.to(device), targets.to(device)
             self.optimizer.zero_grad()
-            outputs,x = net(inputs)
+            outputs, x = net(inputs)
             loss = self.criterion(outputs, targets)
             loss.backward()
             nn.utils.clip_grad_norm_(net.parameters(), grad_clip)
@@ -55,9 +52,9 @@ class Evaluate:
             correct += predicted.eq(targets).sum().item()
 
             utils.progress_bar(batch_idx, len(self.train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+                               % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
 
-    def __test(self,net,epoch):
+    def __test(self, net, epoch):
         global best_acc
         net.eval()
         test_loss = 0
@@ -66,7 +63,7 @@ class Evaluate:
         with torch.no_grad():
             for batch_idx, (inputs, targets) in enumerate(self.valid_loader):
                 inputs, targets = inputs.to(device), targets.to(device)
-                outputs,x = net(inputs)
+                outputs, x = net(inputs)
                 loss = self.criterion(outputs, targets)
 
                 test_loss += loss.item()
@@ -75,8 +72,9 @@ class Evaluate:
                 correct += predicted.eq(targets).sum().item()
 
                 utils.progress_bar(batch_idx, len(self.test_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
-                logging.info("Loss: %.3f | Acc: %.3f%% (%d/%d)" % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+                                   % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+                logging.info("Loss: %.3f | Acc: %.3f%% (%d/%d)" % (
+                test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
         # Save checkpoint.
         acc = 100. * correct / total
         if acc > best_acc:
@@ -92,7 +90,7 @@ class Evaluate:
             best_acc = acc
         return acc
 
-    def __test_final(self,net,epoch):
+    def __test_final(self, net, epoch):
         global best_acc
         net.eval()
         test_loss = 0
@@ -101,7 +99,7 @@ class Evaluate:
         with torch.no_grad():
             for batch_idx, (inputs, targets) in enumerate(self.test_loader):
                 inputs, targets = inputs.to(device), targets.to(device)
-                outputs,x = net(inputs)
+                outputs, x = net(inputs)
                 loss = self.criterion(outputs, targets)
 
                 test_loss += loss.item()
@@ -110,8 +108,9 @@ class Evaluate:
                 correct += predicted.eq(targets).sum().item()
 
                 utils.progress_bar(batch_idx, len(self.test_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                             % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
-                logging.info("Loss: %.3f | Acc: %.3f%% (%d/%d)" % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+                                   % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+                logging.info("Loss: %.3f | Acc: %.3f%% (%d/%d)" % (
+                test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
         # Save checkpoint.
         acc = 100. * correct / total
         if acc > best_acc:
@@ -127,31 +126,32 @@ class Evaluate:
             best_acc = acc
         return acc
 
-    def train(self, model, epochs,hash_indv,grad_clip,warmup=False):
+    def train(self, model, epochs, hash_indv, grad_clip, warmup=False):
         model = model.to(device)
-        self.optimizer = optim.SGD(model.parameters(), lr=0.025,momentum=0.9, weight_decay=5e-4)
-        #self.optimizer = optim.AdamW(model.parameters(),lr = 0.025,betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
+        self.optimizer = optim.SGD(model.parameters(), lr=0.025, momentum=0.9, weight_decay=5e-4)
+        # self.optimizer = optim.AdamW(model.parameters(),lr = 0.025,betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, float(epochs))
         acc = 0
         for epoch in range(0, epochs):
-            self.__train(model,epoch,grad_clip)
-            acc = self.__test(model,epoch)
+            self.__train(model, epoch, grad_clip)
+            acc = self.__test(model, epoch)
             self.scheduler.step()
-        loss = 100- acc
+        loss = 100 - acc
         # with open(os.path.join(os.path.join(os.path.join(os.getcwd(),'checkpoints'),str(hash_indv)),'output.json'), 'w') as json_file:
         #     json.dump(state, json_file)
         return loss
-    def train_final(self, model, epochs,hash_indv,grad_clip,warmup=False):
+
+    def train_final(self, model, epochs, hash_indv, grad_clip, warmup=False):
         model = model.to(device)
-        self.optimizer = optim.SGD(model.parameters(), lr=0.025,momentum=0.9, weight_decay=5e-4)
-        #self.optimizer = optim.AdamW(model.parameters(),lr = 0.025,betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
+        self.optimizer = optim.SGD(model.parameters(), lr=0.025, momentum=0.9, weight_decay=5e-4)
+        # self.optimizer = optim.AdamW(model.parameters(),lr = 0.025,betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, float(epochs))
         acc = 0
         for epoch in range(0, epochs):
-            self.__train(model,epoch,grad_clip)
-            acc = self.__test_final(model,epoch)
+            self.__train(model, epoch, grad_clip)
+            acc = self.__test_final(model, epoch)
             self.scheduler.step()
-        loss = 100- acc
+        loss = 100 - acc
         # with open(os.path.join(os.path.join(os.path.join(os.getcwd(),'checkpoints'),str(hash_indv)),'output.json'), 'w') as json_file:
         #     json.dump(state, json_file)
         return loss

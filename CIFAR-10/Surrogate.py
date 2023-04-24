@@ -2,7 +2,7 @@
 """
 Created on Thu Dec  8 16:48:33 2022
 
-@author: IRMAS
+@author: Muhammad Junaid Ali (IRMAS Lab, University Haute Alsace)
 """
 
 import random
@@ -82,7 +82,7 @@ class Surrogate:
 
             scores.append(mean_squared_error(y_test, y_pred))
 
-        display_scores(np.sqrt(scores))
+        self.display_scores(np.sqrt(scores))
         dump(xgb_model, 'xgb_model.pkl')
 
     def predict_xgb(self,test_data):
@@ -108,4 +108,4 @@ class Surrogate:
 
         search.fit(X, y)
         dump(search, 'xgb_model.pkl')
-        report_best_scores(search.cv_results_, 1)
+        self.report_best_scores(search.cv_results_, 1)
