@@ -1,9 +1,10 @@
 import json
 import random
 import os
+from copy import deepcopy
+
 import numpy as np
 import random
-from thop import profile
 import torch
 import torchvision
 import csv
@@ -18,7 +19,6 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchsummary import summary
 from numpy import savetxt
 from datetime import datetime
-import utils
 import pandas as pd
 import random
 import pickle
@@ -29,26 +29,62 @@ from optimizer import Optimizer
 from Surrogate import Surrogate
 
 class GA(Optimizer):
-  def __init__(self,population_size,number_of_generations,crossover_prob,mutation_prob,blocks_size,num_classes,in_channels,epochs,batch_size,layers,n_channels,dropout_rate,retrain,resume_train,cutout,multigpu_num,grad_clip,dataset,medmnist_dataset):
-    super().__init__(population_size,number_of_generations,crossover_prob,mutation_prob,blocks_size,num_classes,in_channels,epochs,batch_size,layers,n_channels,dropout_rate,retrain,resume_train,cutout,multigpu_num,grad_clip,dataset,medmnist_dataset)
-  def crossover(self,individual1,individual2,prob_rate):
+  def __init__(self,population_size,number_of_generations,crossover_prob,mutation_prob,blocks_size,num_classes,in_channels,epochs,batch_size,layers,n_channels,dropout_rate,retrain,resume_train,cutout,multigpu_num,grad_clip,dataset,medmnist_dataset,type_crossover):
+    super().__init__(population_size,number_of_generations,crossover_prob,mutation_prob,blocks_size,num_classes,in_channels,epochs,batch_size,layers,n_channels,dropout_rate,retrain,resume_train,cutout,multigpu_num,grad_clip,dataset,medmnist_dataset,type_crossover)
+  def crossover(self,individual1,individual2,prob_rate,type="one-point"):
     offspring1 = []
     offspring2 = []
-    gen_prob = random.uniform(0, 1)
-    if gen_prob<=prob_rate:
-      print("In crossover")
-      print(gen_prob)
-      print(prob_rate)
-      while(1):
-        print("yes")
-        crossover_rate = random.randint(0,len(individual1)-1)
-        if crossover_rate>0:
-          print("yes")
-          offspring1 = individual1[:crossover_rate] + individual2[crossover_rate:]
-          offspring2 = individual2[:crossover_rate] + individual1[crossover_rate:]
-          return offspring1,offspring2
+    if type=="one-point":
+      gen_prob = random.uniform(0, 1)
+      if gen_prob<=prob_rate:
+        #print("In crossover")
+        #print(gen_prob)
+        #print(prob_rate)
+        while(1):
+          #print("yes")
+          crossover_rate = random.randint(0,len(individual1)-1)
+          if crossover_rate>0:
+            #print("yes")
+            offspring1 = individual1[:crossover_rate] + individual2[crossover_rate:]
+            offspring2 = individual2[:crossover_rate] + individual1[crossover_rate:]
+            return offspring1,offspring2
+      else:
+        return individual1,individual2
+    elif type=='two-point':
+      gen_prob = random.uniform(0, 1)
+      if gen_prob <= prob_rate :
+        #print("In crossover")
+        #print(gen_prob)
+        #print(prob_rate)
+        while (1):
+          #print("yes")
+          crossover_rate_1 = random.randint(0, len(individual1) - 1)
+          crossover_rate_2 = random.randint(0, len(individual1) - 1)
+          if crossover_rate_1 > 0 and crossover_rate_2<len(individual1) - 1 and crossover_rate_1<crossover_rate_2:
+            print("yes")
+            offspring1 = individual1[:crossover_rate_1] + individual2[crossover_rate_1:crossover_rate_2] + individual1[crossover_rate_2:]
+            offspring2 = individual2[:crossover_rate_1] + individual1[crossover_rate_1:crossover_rate_2] + individual2[crossover_rate_2:]
+            return offspring1, offspring2
+      else:
+        return individual1, individual2
+    elif type=='uniform':
+      offspring1 = []
+      offspring2 = []
+      for i in range(0,len(individual1)):
+        if i%2==0:
+          if random.uniform(0,1) < prob_rate:
+            offspring1.append(individual2[i])
+            offspring2.append(individual1[i])
+          else:
+            offspring2.append(individual2[i])
+            offspring1.append(individual1[i])
+        else:
+          offspring2.append(individual2[i])
+          offspring1.append(individual1[i])
+      return  offspring1,offspring2
     else:
-      return individual1,individual2
+      print("Wrong cross-over type. Kindly change the crossover type")
+      return  individual1, individual2
   def mutate(self,individual,mutation_prob):
     gen_prob = random.uniform(0,1)
     if gen_prob<=mutation_prob:
@@ -116,7 +152,7 @@ class GA(Optimizer):
         print("Parents Individual Number #", i)
         print("\n")
         hash_indv = hashlib.md5(str(self.pop.individuals[i]).encode("UTF-8")).hexdigest()
-        loss = self.evaluator.train(indv,self.epochs,hash_indv,self.grad_clip,data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run)
+        loss = self.evaluator.train(indv,self.epochs,hash_indv,self.grad_clip,'valid',data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run)
         self.pop.fitness[i] = loss
         outfile = open("checkpoints/checkpoints.pkl","wb")
         pickle.dump(self.pop,outfile)
@@ -126,10 +162,6 @@ class GA(Optimizer):
         pickle.dump(i, outfile_no)
         outfile_no.close()
 
-        #np.savetxt(os.path.join(os.path.join(os.getcwd(), 'logs'), "simples.csv"),
-                   # self.pop.fitness,
-                   # delimiter=", ",
-                   # fmt='% s')
         pd.DataFrame(self.pop.fitness).to_csv(os.path.join(os.path.join(os.getcwd(), 'logs'), "parents_logs_" + dt_string + ".csv"), mode='w', encoding="utf-8", index=False)
       print(self.pop.individuals)
       print(self.pop.fitness)
@@ -139,10 +171,7 @@ class GA(Optimizer):
       outfile = open("checkpoints/checkpoints.pkl", "wb")
       pickle.dump(self.pop, outfile)
       outfile.close()
-      #np.savetxt(os.path.join(os.path.join(os.getcwd(), "parents_logs_"+dt_string+".csv")), self.pop.fitness, delimiter=",")
       pd.DataFrame(self.pop.fitness).to_csv(os.path.join(os.path.join(os.getcwd(),'logs'), "parents_logs_"+dt_string+".csv"),mode='w',index=False)
-      # with open(os.path.join(os.path.join(os.getcwd(), 'logs'), 'results_parents.json'),'w') as json_file:
-      #   json.dump(self.pop.fitness, json_file)
       #Training Surrogate model
       train_data = np.asarray(self.pop.individuals)
       label = np.asarray(self.pop.fitness)
@@ -164,7 +193,7 @@ class GA(Optimizer):
         print("Parents Individual Number #", i)
         print("\n")
         hash_indv = hashlib.md5(str(self.pop.individuals[i]).encode("UTF-8")).hexdigest()
-        loss = self.evaluator.train(self.decoded_individuals[i], self.epochs, hash_indv,self.grad_clip)
+        loss = self.evaluator.train(self.decoded_individuals[i], self.epochs, hash_indv,self.grad_clip,'valid')
         self.pop.fitness[i] = loss
         outfile = open("checkpoints/checkpoints.pkl", "wb")
         pickle.dump(self.pop, outfile)
@@ -177,6 +206,8 @@ class GA(Optimizer):
         pd.DataFrame(self.pop.fitness).to_csv(
           os.path.join(os.path.join(os.getcwd(), 'logs'), "parents_logs_" + str(now) + ".csv"), mode='w', index=False)
       self.pop.parents_trained = True
+      self.surrogate_individuals = deepcopy(self.pop.individuals)
+      self.surrogate_individuals_fitness = deepcopy(self.pop.fitness)
       outfile = open("checkpoints/checkpoints.pkl", "wb")
       pickle.dump(self.pop, outfile)
       outfile.close()
@@ -212,7 +243,7 @@ class GA(Optimizer):
     for i in range(gen,self.number_of_generations-1,1):
       print("Generation Number #",i)
       print("\n")
-      for j in range(self.population_size):
+      for j in range(self.population_size-int(0.2*self.population_size)):
       #Step 5: Get Individuals and check with surrogate
 
         #indv1,indv2 = self.enviroment_selection()
@@ -220,7 +251,7 @@ class GA(Optimizer):
         indv2 = self.binary_tournament_selection()
 
       #Step 6: Do Crossover
-        indv1,indv2 = self.crossover(indv1,indv2,self.crossover_prob)
+        indv1,indv2 = self.crossover(indv1,indv2,self.crossover_prob,self.type_crossover)
       #Step 7: Do Mutation
         indv1 = self.mutate(indv1,self.mutation_prob)
         indv2 = self.mutate(indv2,self.mutation_prob)
@@ -239,15 +270,59 @@ class GA(Optimizer):
         individual_1_surrogate = [indv1]
         individual_2_surrogate = np.asarray(indv2)
         individual_2_surrogate = [indv2]
-        #loss_indv1 = self.surrogate.predict(individual_1_surrogate)
-        #loss_indv2 = self.surrogate.predict(individual_2_surrogate)
-        loss_indv1 = self.evaluator.train(decoded_indv1,self.epochs,hash_indv1,self.grad_clip,data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run)
-        loss_indv2 = self.evaluator.train(decoded_indv2,self.epochs,hash_indv2,self.grad_clip,data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run)
+        loss_indv1 = self.surrogate.predict(individual_1_surrogate)
+        loss_indv2 = self.surrogate.predict(individual_2_surrogate)
       #Step 9: Append Fitness Values
         self.offsprings_population.append(indv1)
         self.offsprings_population.append(indv2)
         self.offsprings_fitness.append(loss_indv1)
         self.offsprings_fitness.append(loss_indv2)
+      for j in range(self.population_size - int(0.2 * self.population_size),self.population_size):
+      #Step 5: Get Individuals and check with surrogate
+        #indv1,indv2 = self.enviroment_selection()
+        indv1 = self.binary_tournament_selection()
+        indv2 = self.binary_tournament_selection()
+
+      #Step 6: Do Crossover
+        indv1,indv2 = self.crossover(indv1,indv2,self.crossover_prob,self.type_crossover)
+      #Step 7: Do Mutation
+        indv1 = self.mutate(indv1,self.mutation_prob)
+        indv2 = self.mutate(indv2,self.mutation_prob)
+        print(indv1)
+        print(indv2)
+      #Step 8: Get fitness values of two offsprings
+        decoded_indv1 = NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv1,self.pop.indexes)),self.dropout_rate,'FP32',False)
+        decoded_indv2 = NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv2,self.pop.indexes)),self.dropout_rate,'FP32',False)
+        hash_indv1 = hashlib.md5(str(indv1).encode("UTF-8")).hexdigest()
+        hash_indv2 = hashlib.md5(str(indv2).encode("UTF-8")).hexdigest()
+        isExist = os.path.exists((os.path.join(os.path.join(os.getcwd(), 'checkpoints'), str(hashlib.md5(str(indv1).encode("UTF-8")).hexdigest()))))
+        if not isExist:
+          os.mkdir(os.path.join(os.path.join(os.getcwd(), 'checkpoints'), str(hashlib.md5(str(indv1).encode("UTF-8")).hexdigest())))
+        isExist = os.path.exists((os.path.join(os.path.join(os.getcwd(), 'checkpoints'), str(hashlib.md5(str(indv2).encode("UTF-8")).hexdigest()))))
+        if not isExist:
+          os.mkdir(os.path.join(os.path.join(os.getcwd(), 'checkpoints'), str(hashlib.md5(str(indv2).encode("UTF-8")).hexdigest())))
+        individual_1_surrogate = np.asarray(indv1)
+        #individual_1_surrogate = [indv1]
+        individual_2_surrogate = np.asarray(indv2)
+        #individual_2_surrogate = [indv2]
+        loss_indv1 = self.evaluator.train(indv, self.epochs, hash_indv, self.grad_clip, 'valid', data_flag, output_root,
+                                  num_epochs, gpu_ids, batch_size, download, run)
+        loss_indv2 = self.evaluator.train(indv, self.epochs, hash_indv, self.grad_clip, 'valid', data_flag, output_root,
+                                  num_epochs, gpu_ids, batch_size, download, run)
+
+        print(loss_indv1)
+        print(loss_indv2)
+        #self.surrogate_individuals.append = self.surrogate_individuals.append.tolist()
+        self.surrogate_individuals.append(list(indv1))
+        self.surrogate_individuals.append(list(indv2))
+        self.surrogate_individuals_fitness = list(self.surrogate_individuals_fitness)
+        #self.surrogate_individuals_fitness = self.surrogate_individuals_fitness.tolist()
+        self.surrogate_individuals_fitness.append(loss_indv1)
+        self.surrogate_individuals_fitness.append(loss_indv2)
+        #self.surrogate_individuals_fitness = np.array(self.surrogate_individuals_fitness)
+
+
+
       #Retrain the surrogate on new data
       #Step 10: Sort the fitness values to get top most value
         max_list_par = max(range(len(self.pop.fitness)), key=self.pop.fitness.__getitem__)
@@ -281,17 +356,13 @@ class GA(Optimizer):
   def evaluate_single_model(self,indv):
     data_flag = self.medmnist_dataset
     output_root = './output'
-    num_epochs = 600
+    num_epochs = 300
     gpu_ids = '0'
-    batch_size = 512
+    batch_size = 1024
     download = True
     run = 'model1'
     network = NetworkCIFAR(self.n_channels, self.num_classes, self.layers, True, decode_cell(decode_operations(indv, self.pop.indexes)), self.dropout_rate, 'FP32', False)
     hash_indv = hashlib.md5(str(indv).encode("UTF-8")).hexdigest()
-    print(utils.count_parameters_in_MB(network))
-    print(network.parameters())
-    input = torch.randn(1024, 3, 32, 32)
-    macs, params = profile(network, inputs=(input,))
-    loss = self.evaluator.train(network, 30, hash_indv,self.grad_clip, data_flag, output_root, num_epochs, gpu_ids, batch_size, download,
-     run)
+    evaluation = 'test'
+    loss = self.evaluator.train(network, 100, hash_indv,self.grad_clip,evaluation,data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run)
     print("loss",loss)

@@ -6,6 +6,7 @@ import torch.utils.data as data
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import trange
+from sklearn.metrics import confusion_matrix
 
 from dataset import Dataset
 import random
@@ -23,9 +24,12 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchsummary import summary
 import medmnist
 from medmnist import INFO, Evaluator
+from medmnist.info import INFO, DEFAULT_ROOT
 import utils
 import json
 import time
+
+from evaluation_measures import evaluate_measures
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0
@@ -36,6 +40,7 @@ class Evaluate:
         self.criterion = nn.CrossEntropyLoss()
         self.medmnist_dataset = medmnist_dataset
         self.optimizer = None
+        #Checking for the dataset
         if dataset_name == 'CIFAR-10':
             self.train_loader, self.valid_loader, self.test_loader, self.classes = self.dataset.get_dataset(self.batch_size)
         elif dataset_name == 'CIFAR-100':
@@ -53,79 +58,6 @@ class Evaluate:
         #self.train_loader, self.valid_loader, self.test_loader, self.classes = self.dataset.get_dataset(self.batch_size)
         self.lr = 0.001
         self.scheduler = None
-    #
-    # # Training
-    # def __train(self,net,epoch,grad_clip):
-    #     print('\nEpoch: %d' % epoch)
-    #     net.train()
-    #     train_loss = 0
-    #     correct = 0
-    #     total = 0
-    #     for batch_idx, (inputs, targets) in enumerate(self.train_loader):
-    #         inputs, targets = inputs.to(device), targets.to(device)
-    #         self.optimizer.zero_grad()
-    #         outputs,x = net(inputs)
-    #         loss = self.criterion(outputs, targets)
-    #         loss.backward()
-    #         nn.utils.clip_grad_norm_(net.parameters(), grad_clip)
-    #         self.optimizer.step()
-    #
-    #         train_loss += loss.item()
-    #         _, predicted = outputs.max(1)
-    #         total += targets.size(0)
-    #         correct += predicted.eq(targets).sum().item()
-    #
-    #         utils.progress_bar(batch_idx, len(self.train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-    #                      % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
-    #
-    # def __test(self,net,epoch):
-    #     global best_acc
-    #     net.eval()
-    #     test_loss = 0
-    #     correct = 0
-    #     total = 0
-    #     with torch.no_grad():
-    #         for batch_idx, (inputs, targets) in enumerate(self.test_loader):
-    #             inputs, targets = inputs.to(device), targets.to(device)
-    #             outputs,x = net(inputs)
-    #             loss = self.criterion(outputs, targets)
-    #
-    #             test_loss += loss.item()
-    #             _, predicted = outputs.max(1)
-    #             total += targets.size(0)
-    #             correct += predicted.eq(targets).sum().item()
-    #
-    #             utils.progress_bar(batch_idx, len(self.test_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-    #                          % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
-    #
-    #     # Save checkpoint.
-    #     acc = 100. * correct / total
-    #     if acc > best_acc:
-    #         print('Saving..')
-    #         state = {
-    #             'net': net.state_dict(),
-    #             'acc': acc,
-    #             'epoch': epoch,
-    #         }
-    #         if not os.path.isdir('checkpoint'):
-    #             os.mkdir('checkpoint')
-    #         torch.save(state, './checkpoint/ckpt.pth')
-    #         best_acc = acc
-    #     return acc
-    # def train(self, model, epochs,hash_indv,grad_clip,warmup=False):
-    #     model = model.to(device)
-    #     self.optimizer = optim.SGD(model.parameters(), lr=0.0001,momentum=0.9, weight_decay=5e-4)
-    #     #self.optimizer = optim.AdamW(model.parameters(),lr = 0.025,betas=(0.9, 0.999), eps=1e-08, weight_decay=0.01)
-    #     self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, float(epochs))
-    #     acc = 0
-    #     for epoch in range(0, epochs):
-    #         self.__train(model,epoch,grad_clip)
-    #         acc = self.__test(model,epoch)
-    #         self.scheduler.step()
-    #     loss = 100- acc
-    #     # with open(os.path.join(os.path.join(os.path.join(os.getcwd(),'checkpoints'),str(hash_indv)),'output.json'), 'w') as json_file:
-    #     #     json.dump(state, json_file)
-    #     return loss
 
 
     def __train(self,model, train_loader, task, criterion, optimizer, device, writer):
@@ -133,6 +65,7 @@ class Evaluate:
         global iteration
 
         model.train()
+        # Training the model
         for batch_idx, (inputs, targets) in enumerate(train_loader):
             optimizer.zero_grad()
             outputs,x = model(inputs.to(device))
@@ -155,7 +88,22 @@ class Evaluate:
         return epoch_loss
 
 
-    def __test(self,model, evaluator, data_loader, task, criterion, device, run, save_folder=None):
+    def __test(self,model, evaluator, data_loader, task, criterion, device, run, type_task, save_folder=None):
+        #Testing the model
+        check_evaluator = medmnist.Evaluator(self.medmnist_dataset, type_task)
+        info = INFO[self.medmnist_dataset]
+        task = info["task"]
+        root= DEFAULT_ROOT
+        npz_file = np.load(os.path.join(root, "{}.npz".format((self.medmnist_dataset))))
+        if type_task == 'train':
+            self.labels = npz_file['train_labels']
+        elif type_task == 'val':
+            self.labels = npz_file['val_labels']
+        elif type_task == 'test':
+            self.labels = npz_file['test_labels']
+        else:
+            raise ValueError
+
         model.eval()
 
         total_loss = []
@@ -182,13 +130,13 @@ class Evaluate:
 
             y_score = y_score.detach().cpu().numpy()
             auc, acc = evaluator.evaluate(y_score, save_folder, run)
-
+            f1 = evaluate_measures(self.labels,y_score,task)
             test_loss = sum(total_loss) / len(total_loss)
 
-            return [test_loss, auc, acc]
+            return [test_loss, auc, acc, f1]
 
 
-    def train(self,model,epochs,hash_indv,grad_clip,data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run):
+    def train(self,model,epochs,hash_indv,grad_clip,evaluation,data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run):
         as_rgb = True
         resize = False
         lr = 0.001
@@ -211,8 +159,8 @@ class Evaluate:
         if len(gpu_ids) > 0:
             os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_ids[0])
 
-        #device = torch.device('cuda:{}'.format(gpu_ids[0])) if gpu_ids else torch.device('cpu')
-        print(device)
+        device = torch.device('cuda:{}'.format(gpu_ids[0])) if gpu_ids else torch.device('cpu')
+
         output_root = os.path.join(output_root, data_flag, time.strftime("%y%m%d_%H%M%S"))
         if not os.path.exists(output_root):
             os.makedirs(output_root)
@@ -253,13 +201,13 @@ class Evaluate:
             criterion = nn.BCEWithLogitsLoss()
         else:
             criterion = nn.CrossEntropyLoss()
-        train_metrics = self.__test(model, train_evaluator, train_loader_at_eval, task, criterion, device, run, output_root)
-        val_metrics = self.__test(model, val_evaluator, val_loader, task, criterion, device, run, output_root)
-        test_metrics = self.__test(model, test_evaluator, test_loader, task, criterion, device, run, output_root)
+        train_metrics = self.__test(model, train_evaluator, train_loader_at_eval, task, criterion, device, run,'train', output_root)
+        val_metrics = self.__test(model, val_evaluator, val_loader, task, criterion, device, run,'val', output_root)
+        test_metrics = self.__test(model, test_evaluator, test_loader, task, criterion, device, run,'test', output_root)
 
-        print('train  auc: %.5f  acc: %.5f\n' % (train_metrics[1], train_metrics[2]) + \
-              'val  auc: %.5f  acc: %.5f\n' % (val_metrics[1], val_metrics[2]) + \
-              'test  auc: %.5f  acc: %.5f\n' % (test_metrics[1], test_metrics[2]))
+        print('train  auc: %.5f  acc: %.5f\n  f1: %.5f\n' % (train_metrics[1], train_metrics[2], train_metrics[3]) + \
+              'val  auc: %.5f  acc: %.5f\n f1: %.5f\n' % (val_metrics[1], val_metrics[2], val_metrics[3]) + \
+              'test  auc: %.5f  acc: %.5f\n f1: %.5f\n' % (test_metrics[1], test_metrics[2], test_metrics[3]))
 
         if num_epochs == 0:
             return
@@ -281,13 +229,13 @@ class Evaluate:
 
         global iteration
         iteration = 0
-
+        # Training the models till the given epochs
         for epoch in trange(num_epochs):
             train_loss = self.__train(model, train_loader, task, criterion, optimizer, device, writer)
 
-            train_metrics = self.__test(model, train_evaluator, train_loader_at_eval, task, criterion, device, run)
-            val_metrics = self.__test(model, val_evaluator, val_loader, task, criterion, device, run)
-            test_metrics = self.__test(model, test_evaluator, test_loader, task, criterion, device, run)
+            train_metrics = self.__test(model, train_evaluator, train_loader_at_eval, task, criterion, device, run,'train')
+            val_metrics = self.__test(model, val_evaluator, val_loader, task, criterion, device, run,'val')
+            test_metrics = self.__test(model, test_evaluator, test_loader, task, criterion, device, run,'test')
 
             scheduler.step()
 
@@ -316,14 +264,14 @@ class Evaluate:
         path = os.path.join(output_root, 'best_model.pth')
         torch.save(state, path)
 
-        train_metrics = self.__test(best_model, train_evaluator, train_loader_at_eval, task, criterion, device, run,
+        train_metrics = self.__test(best_model, train_evaluator, train_loader_at_eval, task, criterion, device, run,'train',
                              output_root)
-        val_metrics = self.__test(best_model, val_evaluator, val_loader, task, criterion, device, run, output_root)
-        test_metrics = self.__test(best_model, test_evaluator, test_loader, task, criterion, device, run, output_root)
+        val_metrics = self.__test(best_model, val_evaluator, val_loader, task, criterion, device, run,'val', output_root)
+        test_metrics = self.__test(best_model, test_evaluator, test_loader, task, criterion, device, run,'test', output_root)
 
-        train_log = 'train  auc: %.5f  acc: %.5f\n' % (train_metrics[1], train_metrics[2])
-        val_log = 'val  auc: %.5f  acc: %.5f\n' % (val_metrics[1], val_metrics[2])
-        test_log = 'test  auc: %.5f  acc: %.5f\n' % (test_metrics[1], test_metrics[2])
+        train_log = 'train  auc: %.5f  acc: %.5f\n   f1: %.5f\n' % (train_metrics[1], train_metrics[2], train_metrics[3])
+        val_log = 'val  auc: %.5f  acc: %.5f\n   f1: %.5f\n' % (val_metrics[1], val_metrics[2], train_metrics[3])
+        test_log = 'test  auc: %.5f  acc: %.5f\n   f1: %.5f\n' % (test_metrics[1], test_metrics[2], train_metrics[3])
 
         log = '%s\n' % (data_flag) + train_log + val_log + test_log
         print(log)
@@ -332,5 +280,7 @@ class Evaluate:
             f.write(log)
 
         writer.close()
-
-        return 1 - test_metrics[1]
+        if evaluation == 'valid':
+            return 1 - val_metrics[3]
+        else:
+            return 1 - test_metrics[3]
