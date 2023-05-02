@@ -9,3 +9,9 @@ The data used in this project comes from the [MEDMNIST(http://medmnist.com)  and
 The code runs using Python 3.9. You will need to install the packages present in the [requirements.txt](requirements.txt) file.
 
 ``pip install -r requirements.txt``
+
+### Run the experiments
+
+To simply run all the experiments, you can type:
+
+``python3 main.py run_all``
