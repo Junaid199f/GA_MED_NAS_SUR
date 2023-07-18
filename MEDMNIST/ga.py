@@ -244,7 +244,7 @@ class GA(Optimizer):
       print("Generation Number #",i)
       print("\n")
       #80% Predictions from the surrogate
-      for j in range(self.population_size-int(0.8*self.population_size)):
+      for j in range(self.population_size-int(0.2*self.population_size)):
       #Step 5: Get Individuals
 
         #indv1,indv2 = self.enviroment_selection()
