@@ -8,8 +8,7 @@ import numpy as np
 import operations_mapping
 from utils import create_param_choices
 
-
-# import lhsmdu
+#The population class used to generate individuals
 
 class Population():
     def __init__(self, block_size, population_size):
@@ -49,7 +48,7 @@ class Population():
             h += 1
         ub[n_var // 2:] = ub[:n_var // 2]
         return ub.astype(np.uint8)
-
+    #Generating the individuals, this function can be modified to create different kinds of encoding schemes
     def generate_individuals(self, block_size):
         # sampler = qmc.LatinHypercube(d=1)
         # sample = sampler.random(n=1)
@@ -69,18 +68,17 @@ class Population():
                 self.individual.append(int(random.choice(self.params_choices[str(i)])))
         return self.individual
 
-
+    #Decoding the individual
     def decode_individuals(self, pop):
+        #For given population
         population = []
         for i, gen in enumerate(pop):
+            #For each individual
             network = {}
             for i, indv in enumerate(gen):
                 # print(OPS.get(thisdict.get(indv)))
                 if i % 2 == 0:
+                    #Get the operation from given individual genes
                     network[str(i)] = operations_mapping.get(math.floor((indv) * len(operations_mapping)))
-                    # print(operations_mapping.get(indv))
-                # else:
-                #   #print(int(random.choice(indexes)))
-                #   network[str(i)] = int(random.choice(self.indexes))
             population.append(network)
         return population

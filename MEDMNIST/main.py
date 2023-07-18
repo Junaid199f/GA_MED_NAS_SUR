@@ -28,9 +28,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # Setting the paramters for the GA-NAS algorithm
+    # Setting the MedMNIST datasets
     datasets = ['chestmnist', 'pathmnist', 'dermamnist', 'retinamnist', 'organamnist']
+    #Iterate through the datasets
     for dataset in datasets:
+        #Initialize the genetic algorithm based NAS parameters
         ga = GA(args.population_size, args.number_of_generations, args.crossover_prob, args.mutation_prob,
                 args.blocks_size,
                 args.num_classes, args.in_channels, args.epochs, args.batch_size, args.layers, args.n_channels,
@@ -39,5 +41,4 @@ if __name__ == '__main__':
         # ga = GA(20,30 ,0.9,0.6,32,10,3,3,1024,8,16,0.3,False,False,False,3,5,'MEDMNIST',dataset,type_crossover='one-point')
         # Running the algorithm
         ga.evolve()
-    # indv = [0.09, 0, 0.88, 0, 0.8, 0, 0.56, 0, 0.49, 1, 0.29, 0, 0.05, 0, 0.68, 2, 0.43, 0, 0.82, 0, 0.88, 0, 0.62, 0, 0.13, 0, 0.52, 1, 0.64, 3, 0.96, 2]
-    # ga.evaluate_single_model(indv)
+

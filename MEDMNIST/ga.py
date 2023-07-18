@@ -1,14 +1,14 @@
+#Importing the libraries
 import json
 import random
 import os
-from copy import deepcopy
-
-import numpy as np
 import random
 import torch
-import torchvision
 import csv
 import hashlib
+import torchvision
+import numpy as np
+from copy import deepcopy
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,28 +23,28 @@ import pandas as pd
 import random
 import pickle
 import matplotlib.pyplot as plt
+#Import the models functions from the model files
 from model import NetworkCIFAR, Network, PyramidNetworkCIFAR
+#Import the decoding functions
 from utils import decode_cell, decode_operations
+#Import the optimizer functions which inherits from the GA class
 from optimizer import Optimizer
+#Import the surrogate functions
 from Surrogate import Surrogate
 
 class GA(Optimizer):
   def __init__(self,population_size,number_of_generations,crossover_prob,mutation_prob,blocks_size,num_classes,in_channels,epochs,batch_size,layers,n_channels,dropout_rate,retrain,resume_train,cutout,multigpu_num,grad_clip,dataset,medmnist_dataset,type_crossover):
     super().__init__(population_size,number_of_generations,crossover_prob,mutation_prob,blocks_size,num_classes,in_channels,epochs,batch_size,layers,n_channels,dropout_rate,retrain,resume_train,cutout,multigpu_num,grad_clip,dataset,medmnist_dataset,type_crossover)
+ #Crossover techniques
   def crossover(self,individual1,individual2,prob_rate,type="one-point"):
     offspring1 = []
     offspring2 = []
     if type=="one-point":
       gen_prob = random.uniform(0, 1)
       if gen_prob<=prob_rate:
-        #print("In crossover")
-        #print(gen_prob)
-        #print(prob_rate)
         while(1):
-          #print("yes")
           crossover_rate = random.randint(0,len(individual1)-1)
           if crossover_rate>0:
-            #print("yes")
             offspring1 = individual1[:crossover_rate] + individual2[crossover_rate:]
             offspring2 = individual2[:crossover_rate] + individual1[crossover_rate:]
             return offspring1,offspring2
@@ -53,15 +53,10 @@ class GA(Optimizer):
     elif type=='two-point':
       gen_prob = random.uniform(0, 1)
       if gen_prob <= prob_rate :
-        #print("In crossover")
-        #print(gen_prob)
-        #print(prob_rate)
         while (1):
-          #print("yes")
           crossover_rate_1 = random.randint(0, len(individual1) - 1)
           crossover_rate_2 = random.randint(0, len(individual1) - 1)
           if crossover_rate_1 > 0 and crossover_rate_2<len(individual1) - 1 and crossover_rate_1<crossover_rate_2:
-            print("yes")
             offspring1 = individual1[:crossover_rate_1] + individual2[crossover_rate_1:crossover_rate_2] + individual1[crossover_rate_2:]
             offspring2 = individual2[:crossover_rate_1] + individual1[crossover_rate_1:crossover_rate_2] + individual2[crossover_rate_2:]
             return offspring1, offspring2
@@ -100,7 +95,6 @@ class GA(Optimizer):
       population_fitness = sum([individual for individual in self.pop.fitness])
       chromosome_probabilities = [individual / population_fitness for individual in self.pop.fitness]
       # Making the probabilities for a minimization problem
-      #chromosome_probabilities = 1 - np.array(chromosome_probabilities)
       rand_pick = np.random.choice(chromosome_probabilities)
       index_elem = chromosome_probabilities.index(rand_pick)
       return self.pop.individuals[index_elem]
@@ -126,7 +120,7 @@ class GA(Optimizer):
         return self.pop.individuals[indv1],self.pop.individuals[indv2]
   def evolve(self):
 
-
+    #Main parameters
     data_flag = self.medmnist_dataset
     output_root = './output'
     num_epochs = self.epochs
@@ -146,7 +140,13 @@ class GA(Optimizer):
     # If the parents individuals are not trained and the training is not resumed then train all the parents population
     if self.pop.parents_trained == False and self.resume_train == False :
       #Step 1: Get Individuals
-      self.decoded_individuals = [NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(self.pop.individuals[i],self.pop.indexes)),self.dropout_rate,'FP32',False) for i in range(0,len(self.pop.individuals),1)]
+      #Decode the individuals
+      #This function returns the decoded individuals
+      # 1) The decode cell function first decode the operations to get the genotype which is the the standard format to represent genotype
+      # 1.1) The genotype is a named tuple which is second level encoding the first level encoding is the continuous encoding scheme
+      # 1.2) Genotype = namedtuple('Genotype', 'normal normal_concat reduce reduce_concat')
+      # 2) Pass the genotype namedtuple variable to the network class
+      self.decoded_individuals = [Network(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(self.pop.individuals[i],self.pop.indexes)),self.dropout_rate,'FP32',False) for i in range(0,len(self.pop.individuals),1)]
       #Step 2: Train Individuals to Get Fitness Values
       for i,indv in enumerate(self.decoded_individuals):
         print("Parents Individual Number #", i)
@@ -182,7 +182,7 @@ class GA(Optimizer):
     elif self.pop.parents_trained == False and self.resume_train == True:
       print("entered here")
       #Step 1: Get Individuals
-      self.decoded_individuals = [NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(self.pop.individuals[i],self.pop.indexes)),self.dropout_rate,'FP32',False) for i in range(0,len(self.pop.individuals),1)]
+      self.decoded_individuals = [Network(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(self.pop.individuals[i],self.pop.indexes)),self.dropout_rate,'FP32',False) for i in range(0,len(self.pop.individuals),1)]
       #Step 2: Train Individuals to Get Fitness Values
       outfile_no = open("checkpoints/generations_pop.pkl", "rb")
       gen_pop= pickle.load(outfile_no)
@@ -243,8 +243,9 @@ class GA(Optimizer):
     for i in range(gen,self.number_of_generations-1,1):
       print("Generation Number #",i)
       print("\n")
-      for j in range(self.population_size-int(0.2*self.population_size)):
-      #Step 5: Get Individuals and check with surrogate
+      #80% Predictions from the surrogate
+      for j in range(self.population_size-int(0.8*self.population_size)):
+      #Step 5: Get Individuals
 
         #indv1,indv2 = self.enviroment_selection()
         indv1 = self.binary_tournament_selection()
@@ -256,8 +257,8 @@ class GA(Optimizer):
         indv1 = self.mutate(indv1,self.mutation_prob)
         indv2 = self.mutate(indv2,self.mutation_prob)
       #Step 8: Get fitness values of two offsprings
-        decoded_indv1 = NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv1,self.pop.indexes)),self.dropout_rate,'FP32',False)
-        decoded_indv2 = NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv2,self.pop.indexes)),self.dropout_rate,'FP32',False)
+        decoded_indv1 = Network(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv1,self.pop.indexes)),self.dropout_rate,'FP32',False)
+        decoded_indv2 = Network(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv2,self.pop.indexes)),self.dropout_rate,'FP32',False)
         hash_indv1 = hashlib.md5(str(indv1).encode("UTF-8")).hexdigest()
         hash_indv2 = hashlib.md5(str(indv2).encode("UTF-8")).hexdigest()
         isExist = os.path.exists((os.path.join(os.path.join(os.getcwd(), 'checkpoints'), str(hashlib.md5(str(indv1).encode("UTF-8")).hexdigest()))))
@@ -267,9 +268,11 @@ class GA(Optimizer):
         if not isExist:
           os.mkdir(os.path.join(os.path.join(os.getcwd(), 'checkpoints'), str(hashlib.md5(str(indv2).encode("UTF-8")).hexdigest())))
         individual_1_surrogate = np.asarray(indv1)
+        #Predict from the surrogate
         individual_1_surrogate = [indv1]
         individual_2_surrogate = np.asarray(indv2)
         individual_2_surrogate = [indv2]
+        # Predict from the surrogate
         loss_indv1 = self.surrogate.predict(individual_1_surrogate)
         loss_indv2 = self.surrogate.predict(individual_2_surrogate)
       #Step 9: Append Fitness Values
@@ -277,6 +280,7 @@ class GA(Optimizer):
         self.offsprings_population.append(indv2)
         self.offsprings_fitness.append(loss_indv1)
         self.offsprings_fitness.append(loss_indv2)
+      #20% predictions manually
       for j in range(self.population_size - int(0.2 * self.population_size),self.population_size):
       #Step 5: Get Individuals and check with surrogate
         #indv1,indv2 = self.enviroment_selection()
@@ -291,8 +295,8 @@ class GA(Optimizer):
         print(indv1)
         print(indv2)
       #Step 8: Get fitness values of two offsprings
-        decoded_indv1 = NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv1,self.pop.indexes)),self.dropout_rate,'FP32',False)
-        decoded_indv2 = NetworkCIFAR(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv2,self.pop.indexes)),self.dropout_rate,'FP32',False)
+        decoded_indv1 = Network(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv1,self.pop.indexes)),self.dropout_rate,'FP32',False)
+        decoded_indv2 = Network(self.n_channels,self.num_classes,self.layers,True,decode_cell(decode_operations(indv2,self.pop.indexes)),self.dropout_rate,'FP32',False)
         hash_indv1 = hashlib.md5(str(indv1).encode("UTF-8")).hexdigest()
         hash_indv2 = hashlib.md5(str(indv2).encode("UTF-8")).hexdigest()
         isExist = os.path.exists((os.path.join(os.path.join(os.getcwd(), 'checkpoints'), str(hashlib.md5(str(indv1).encode("UTF-8")).hexdigest()))))
@@ -352,6 +356,7 @@ class GA(Optimizer):
     min_list_par = min(range(len(self.pop.fitness)), key=self.pop.fitness.__getitem__)
     print("Best Individual is with fitness value:: " , self.pop.fitness[min_list_par])
     print("\n Individual is \n", self.pop.individuals[min_list_par])
+    #Evaulate the final model
     self.evaluate_single_model(self.pop.individuals[min_list_par])
   def evaluate_single_model(self,indv):
     data_flag = self.medmnist_dataset
@@ -361,7 +366,7 @@ class GA(Optimizer):
     batch_size = 1024
     download = True
     run = 'model1'
-    network = NetworkCIFAR(self.n_channels, self.num_classes, self.layers, True, decode_cell(decode_operations(indv, self.pop.indexes)), self.dropout_rate, 'FP32', False)
+    network = Network(self.n_channels, self.num_classes, self.layers, True, decode_cell(decode_operations(indv, self.pop.indexes)), self.dropout_rate, 'FP32', False)
     hash_indv = hashlib.md5(str(indv).encode("UTF-8")).hexdigest()
     evaluation = 'test'
     loss = self.evaluator.train(network, 100, hash_indv,self.grad_clip,evaluation,data_flag, output_root, num_epochs, gpu_ids, batch_size, download, run)

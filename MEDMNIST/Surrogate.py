@@ -85,11 +85,14 @@ class Surrogate:
         self.display_scores(np.sqrt(scores))
         dump(xgb_model, 'xgb_model.pkl')
 
+    #Predict the fitness values
     def predict_xgb(self,test_data):
 
         model = load('xgb_model.pkl')
         prediction = model.predict(test_data)
         return prediction
+
+    #Tuning the paramters of XG Boost using RandomSearch CV
     def xgb_hpo(self,train_data,train_label):
 
         xgb_model = xgb.XGBRegressor()

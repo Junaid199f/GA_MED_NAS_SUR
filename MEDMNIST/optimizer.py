@@ -7,20 +7,26 @@ import Surrogate
 from evaluate import Evaluate
 from population import Population
 
-
+#This class acts as a core of the algorithm which contains all the parameters of NAS algorithm
 class Optimizer:
     def __init__(self, population_size, number_of_generations, crossover_prob, mutation_prob, blocks_size, num_classes,
                  in_channels, epochs, batch_size, layers, n_channels, dropout_rate, retrain, resume_train, cutout,
                  multigpu_num, grad_clip, dataset, medmnist_dataset, type_crossover):
+        #If we have to resume the training from where we left or the program stopps due to some error
         self.resume_train = resume_train
         if self.resume_train == True:
+            #Reading the checkpoint file containing the checkpoints variables
             z = open('checkpoints/checkpoints.pkl', 'rb')
             # self.pop =  Population(blocks_size, population_size)
+            #Loading the population
             self.pop = pickle.load(z)
         else:
+            #Initialize the population
             self.pop = Population(blocks_size, population_size)
         self.population_size = population_size
         self.number_of_generations = number_of_generations
+
+        #MedMNIST parameters
         self.medmnist_dataset = medmnist_dataset
         info = INFO[self.medmnist_dataset]
         task = info['task']
@@ -79,8 +85,6 @@ class Optimizer:
 
     def decode(self):
         self.decoded_individuals = self.pop.decode_individuals(self.pop.Individuals)
-        # for i in range(self.population_size):
-        # model = Net(pop.individual[0],self.in_channels,self.intermediate_channels,self.num_classes,self.block_size)
 
     def optimize(self):
         self.evolve()

@@ -357,7 +357,7 @@ def decode_operations(pop, indexes):
     for i, indv in enumerate(pop):
         # print(OPS.get(thisdict.get(indv)))
         if i % 2 == 0:
-            network[str(i)] = operations_mapping.get(math.floor((indv) * len(operations_mapping)))
+            network[str(i)] = operations_mapping.get(math.ceil((indv) * len(operations_mapping)))
             # print(operations_mapping.get(indv))
         else:
             #   #print(int(random.choice(indexes)))
