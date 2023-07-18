@@ -16,6 +16,40 @@ from operations_mapping import operations_mapping
 term_width = 5
 
 
+class Transform3D:
+
+    def __init__(self, mul=None):
+        self.mul = mul
+
+    def __call__(self, voxel):
+
+        if self.mul == '0.5':
+            voxel = voxel * 0.5
+        elif self.mul == 'random':
+            voxel = voxel * np.random.uniform()
+
+        return voxel.astype(np.float32)
+
+
+def model_to_syncbn(model):
+    preserve_state_dict = model.state_dict()
+    _convert_module_from_bn_to_syncbn(model)
+    model.load_state_dict(preserve_state_dict)
+    return model
+
+
+def _convert_module_from_bn_to_syncbn(module):
+    for child_name, child in module.named_children():
+        if hasattr(nn, child.__class__.__name__) and \
+                'batchnorm' in child.__class__.__name__.lower():
+            TargetClass = globals()['Synchronized' + child.__class__.__name__]
+            arguments = TargetClass.__init__.__code__.co_varnames[1:]
+            kwargs = {k: getattr(child, k) for k in arguments}
+            setattr(module, child_name, TargetClass(**kwargs))
+        else:
+            _convert_module_from_bn_to_syncbn(child)
+
+
 def get_mean_and_std(dataset):
     '''Compute the mean and std value of dataset.'''
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
@@ -323,7 +357,7 @@ def decode_operations(pop, indexes):
     for i, indv in enumerate(pop):
         # print(OPS.get(thisdict.get(indv)))
         if i % 2 == 0:
-            network[str(i)] = operations_mapping.get(math.floor((indv) * len(operations_mapping)))
+            network[str(i)] = operations_mapping.get(math.ceil((indv) * len(operations_mapping)))
             # print(operations_mapping.get(indv))
         else:
             #   #print(int(random.choice(indexes)))
