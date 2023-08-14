@@ -1,0 +1,43 @@
+2023-03-24 13:46:12,881 Parents_Trained_status: True
+2023-03-24 13:46:12,882 Resume Training Status: True
+2023-03-24 13:46:12,882 Generation Number # 1
+2023-03-24 14:06:06,346 Parents_Trained_status: True
+2023-03-24 14:06:06,346 Resume Training Status: True
+2023-03-24 14:06:06,347 Generation Number # 1
+2023-03-24 14:22:19,856 Epoch [1], Loss: 0.7686, Training Accuracy: 68.26%, Validation Accuracy: 70.11%
+2023-03-27 11:03:55,160 Parents_Trained_status: True
+2023-03-27 11:03:55,181 Resume Training Status: True
+2023-03-27 11:03:55,228 Generation Number # 1
+2023-03-27 11:10:34,315 Parents_Trained_status: False
+2023-03-27 11:10:34,317 Resume Training Status: False
+2023-03-27 11:10:34,872 Parents Individual Number # 0
+2023-03-27 11:34:04,582 Epoch [1], Loss: 0.7883, Training Accuracy: 67.48%, Validation Accuracy: 69.15%
+2023-03-27 11:42:45,443 Epoch [1], Loss: 0.8343, Training Accuracy: 65.14%, Validation Accuracy: 68.49%
+2023-03-27 12:00:03,905 Epoch [2], Loss: 0.6493, Training Accuracy: 70.81%, Validation Accuracy: 72.72%
+2023-03-27 12:13:15,607 Epoch [2], Loss: 0.7483, Training Accuracy: 68.04%, Validation Accuracy: 68.96%
+2023-03-27 12:26:33,275 Epoch [3], Loss: 0.5719, Training Accuracy: 75.80%, Validation Accuracy: 78.10%
+2023-03-27 12:52:37,123 Epoch [4], Loss: 0.5045, Training Accuracy: 79.20%, Validation Accuracy: 79.39%
+2023-03-27 12:52:51,115 Parents_Trained_status: False
+2023-03-27 12:52:51,117 Resume Training Status: False
+2023-03-27 12:52:51,650 Parents Individual Number # 0
+2023-03-27 13:15:13,662 Epoch [1], Loss: 0.8409, Training Accuracy: 65.45%, Validation Accuracy: 68.10%
+2023-03-27 13:18:35,216 Epoch [5], Loss: 0.4587, Training Accuracy: 82.03%, Validation Accuracy: 82.07%
+2023-03-27 13:36:03,719 Epoch [2], Loss: 0.7458, Training Accuracy: 68.45%, Validation Accuracy: 68.92%
+2023-03-27 13:42:24,983 Epoch [1], Loss: 0.7953, Training Accuracy: 67.57%, Validation Accuracy: 68.00%
+2023-03-27 13:56:57,719 Epoch [3], Loss: 0.6967, Training Accuracy: 69.83%, Validation Accuracy: 70.34%
+2023-03-27 14:06:16,964 Epoch [2], Loss: 0.6929, Training Accuracy: 69.58%, Validation Accuracy: 70.24%
+2023-03-27 14:17:47,045 Epoch [4], Loss: 0.6636, Training Accuracy: 71.05%, Validation Accuracy: 71.90%
+2023-03-27 14:30:10,823 Epoch [3], Loss: 0.6070, Training Accuracy: 74.03%, Validation Accuracy: 75.23%
+2023-03-27 14:38:34,435 Epoch [5], Loss: 0.6349, Training Accuracy: 72.67%, Validation Accuracy: 73.02%
+2023-03-27 14:54:08,219 Epoch [4], Loss: 0.5436, Training Accuracy: 77.53%, Validation Accuracy: 79.95%
+2023-03-27 14:59:23,176 Epoch [6], Loss: 0.6170, Training Accuracy: 73.17%, Validation Accuracy: 74.24%
+2023-03-27 15:18:20,838 Epoch [5], Loss: 0.4931, Training Accuracy: 80.31%, Validation Accuracy: 79.82%
+2023-03-27 15:18:20,841 Loss for individual Number 1 17.932628797886395
+2023-03-27 15:18:20,843 Loss for individual Number 2 20.17833553500661
+2023-03-27 15:18:20,845 Gbest is 12.615587846763546
+2023-03-27 15:18:20,846 fITNESS OFFSPRING IS 17.932628797886395
+2023-03-27 15:20:31,730 Epoch [7], Loss: 0.6132, Training Accuracy: 73.42%, Validation Accuracy: 73.61%
+2023-03-27 15:42:03,006 Epoch [8], Loss: 0.6075, Training Accuracy: 73.80%, Validation Accuracy: 73.22%
+2023-03-27 15:49:01,052 Epoch [1], Loss: 0.7806, Training Accuracy: 67.48%, Validation Accuracy: 67.97%
+2023-03-27 16:03:35,350 Epoch [9], Loss: 0.6066, Training Accuracy: 74.41%, Validation Accuracy: 73.68%
+2023-03-27 16:19:43,379 Epoch [2], Loss: 0.6785, Training Accuracy: 70.52%, Validation Accuracy: 71.43%
