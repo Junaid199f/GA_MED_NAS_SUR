@@ -15,3 +15,7 @@ The code runs using Python 3.9. You will need to install the packages present in
 To simply run all the experiments, you can type:
 
 ``python3 main.py run_all``
+
+###  If you have any questions, please open an issue or email us:
+
+M. Junaid Ali : muhammad-junaid.ali@uha.fr 
