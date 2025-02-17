@@ -11,38 +11,11 @@ from torchvision import datasets
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchsummary import summary
-#Operations
+
 from operations import FactorizedReduce, ActConvBN, SELayer, Nonlocal, OPS, Identity
 from utils import drop_path_fp16, drop_path
 
-#The code provided defines a neural network architecture for image classification called Network.
-# It consists of a stem layer, followed by multiple Cell modules.
-# The Cell module is responsible for processing the input and passing it through a sequence of operations defined by the genotype.
 
-#The Network class is instantiated with the following arguments:
-
-#genotype: A predefined structure that defines the operations and connectivity of the network cells.
-#num_classes: The number of output classes for classification.
-#C: The number of channels in the initial stem layer.
-#stem_multiplier: A multiplier applied to C to determine the number of channels in subsequent layers.
-#layers: The number of cells in the network.
-#The forward method of the Network class performs the forward pass through the network.
-# It applies the stem layer to the input and then iterates through each cell, passing the previous and current cell outputs.
-# Finally, it applies global pooling, followed by a linear layer to produce the logits for classification.
-
-#The Cell class represents a single cell within the network architecture.
-# Each cell takes two inputs, s0 and s1, and processes them using a sequence of operations defined by the genotype.
-# The Cell class also supports reduction operations that downsample the spatial dimensions of the input.
-# The output of the last cell is returned by the forward method.
-
-#There are additional classes defined in the code, such as AuxiliaryHeadCIFAR, PyramidNetworkCIFAR, AuxiliaryHeadImageNet, etc.,
-# that provide auxiliary classification heads or alternative network architectures.
-# These classes extend or utilize the Cell and Network classes to create different variations of the network architecture.
-
-#This code framework is build by authors of DARTS article and used for cell basesd search space for NAS
-
-
-#This is the cells
 class Cell(nn.Module):
 
   def __init__(self, genotype, C_prev_prev, C_prev, C, reduction, reduction_prev, SE=False):
@@ -219,7 +192,7 @@ class PyramidNetworkCIFAR(nn.Module):
     return logits, logits_aux
 
 
-class Network(nn.Module):
+class NetworkCIFAR(nn.Module):
 
   def __init__(self, C, num_classes, layers, auxiliary, genotype, drop_path_prob, mode, SE=False):
     super(NetworkCIFAR, self).__init__()

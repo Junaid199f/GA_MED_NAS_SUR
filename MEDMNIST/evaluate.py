@@ -291,6 +291,6 @@ class Evaluate:
 
         # Retuning the fitness values
         if evaluation == 'valid':
-            return 1 - val_metrics[3]
+            return 1 - val_metrics[1]
         else:
-            return 1 - test_metrics[3]
+            return 1 - test_metrics[1]

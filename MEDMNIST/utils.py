@@ -362,7 +362,7 @@ def decode_operations(pop, indexes):
         else:
             #   #print(int(random.choice(indexes)))
             network[str(i)] = indv
-    # print(network)
+    print(network)
     return network
 
 
