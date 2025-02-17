@@ -38,10 +38,10 @@ class Population():
         self.individuals = [self.generate_individuals(self.block_size) for i in range(self.population_size)]
 
         # Creating directories for saving model logs and results of each individual
-        for i, indv in enumerate(self.individuals):
-            self.networks_indvs[hashlib.md5(str(indv).encode("UTF-8")).hexdigest()] = indv
-            os.mkdir(os.path.join(os.path.join(os.getcwd(), 'checkpoints'),
-                                  str(hashlib.md5(str(indv).encode("UTF-8")).hexdigest())))
+        # for i, indv in enumerate(self.individuals):
+        #     self.networks_indvs[hashlib.md5(str(indv).encode("UTF-8")).hexdigest()] = indv
+        #     os.mkdir(os.path.join(os.path.join(os.getcwd(), 'checkpoints'),
+        #                           str(hashlib.md5(str(indv).encode("UTF-8")).hexdigest())))
     #Function to define operations for the encoding scheme
     def setup_NAS(self, n_blocks, n_ops):
         n_var = int(4 * n_blocks * 2)
